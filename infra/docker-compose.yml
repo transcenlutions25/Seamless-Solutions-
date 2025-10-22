@@ -1,14 +1,76 @@
-version: '3.9'
+version: '3.8'
+
 services:
-  db:
+  postgres:
     image: postgres:15-alpine
+    container_name: seamless-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
-      POSTGRES_DB: seamless_solutions
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: seamless
     ports:
       - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:7-alpine
+    container_name: seamless-redis
+    restart: unless-stopped
     ports:
       - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API service (for production)
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    container_name: seamless-api
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/seamless
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - production
+
+  # Web service (for production)
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    container_name: seamless-web
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://api:3001
+    depends_on:
+      - api
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+  redis_data:
