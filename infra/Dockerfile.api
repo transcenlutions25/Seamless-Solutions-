@@ -1,0 +1,14 @@
+FROM node:20-alpine AS base
+WORKDIR /app
+COPY apps/api/package.json apps/api/tsconfig.json ./
+RUN npm i -g pnpm@9
+RUN pnpm install --prefer-offline --frozen-lockfile || true
+COPY apps/api ./
+RUN pnpm --filter @seamless/api prisma:generate && pnpm --filter @seamless/api build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+COPY --from=base /app/apps/api/dist ./dist
+COPY --from=base /app/apps/api/node_modules ./node_modules
+ENV NODE_ENV=production
+CMD ["node", "dist/index.js"]

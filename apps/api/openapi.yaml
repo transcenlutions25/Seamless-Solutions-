@@ -1,0 +1,103 @@
+openapi: 3.0.3
+info:
+  title: Seamless Solutions API
+  version: 1.0.0
+servers:
+  - url: http://localhost:4000
+paths:
+  /health:
+    get:
+      responses:
+        '200':
+          description: OK
+  /auth/dev-login:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId: { type: string }
+                orgId: { type: string }
+                role: { type: string, enum: [OWNER, STAFF, VENDOR, CLIENT] }
+      responses:
+        '200': { description: JWT token }
+  /leads:
+    get:
+      responses:
+        '200': { description: List leads }
+    post:
+      responses:
+        '200': { description: Create lead }
+  /leads/{id}:
+    get:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Lead }
+  /leads/{id}/status:
+    patch:
+      responses:
+        '200': { description: Update status }
+  /leads/{id}/convert:
+    post:
+      responses:
+        '200': { description: Convert to client }
+  /ai/bid:
+    post:
+      responses:
+        '200': { description: Create bid and quote }
+  /quotes/{id}/accept:
+    post:
+      responses:
+        '200': { description: Create job }
+  /jobs/{id}/status:
+    patch:
+      responses:
+        '200': { description: Update job status }
+  /jobs/{id}/invoices:
+    post:
+      responses:
+        '200': { description: Create invoice }
+  /stripe/webhook:
+    post:
+      responses:
+        '200': { description: Webhook received }
+  /jobs/{id}/appointments:
+    post:
+      responses:
+        '200': { description: Create appointment }
+  /appointments:
+    get:
+      responses:
+        '200': { description: List appointments }
+  /campaigns:
+    post:
+      responses:
+        '200': { description: Create campaign }
+  /triggers/quote-sent:
+    post:
+      responses:
+        '200': { description: Trigger queued }
+  /analytics/kpis:
+    get:
+      responses:
+        '200': { description: KPIs }
+  /files/sign-upload:
+    post:
+      responses:
+        '200': { description: Signed URL }
+  /files/preview/{storageKey}:
+    get:
+      parameters:
+        - in: path
+          name: storageKey
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Preview URL }
