@@ -1,0 +1,6 @@
+{
+  "name": "@seamless/api",
+  "version": "1.0.0",
+  "scripts": { "dev": "tsx src/index.ts" },
+  "dependencies": { "fastify": "4.28.1" }
+}
