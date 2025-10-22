@@ -2,6 +2,10 @@
   "name": "seamless-solutions",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@10.19.0",
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "scripts": {
     "dev": "pnpm -r --filter @seamless/* dev",
     "build": "pnpm -r --filter @seamless/* build",
