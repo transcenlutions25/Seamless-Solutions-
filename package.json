@@ -6,6 +6,8 @@
     "dev": "pnpm -r --filter @seamless/* dev",
     "build": "pnpm -r --filter @seamless/* build",
     "start": "pnpm -r --filter @seamless/* start",
+    "prisma:generate": "pnpm --filter @seamless/api prisma generate",
+    "prisma:validate": "pnpm --filter @seamless/api prisma validate",
     "push:github": "bash scripts/oneclick-github.sh"
   },
   "devDependencies": {

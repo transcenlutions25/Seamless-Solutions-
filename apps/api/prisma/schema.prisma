@@ -1,0 +1,281 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  STAFF
+  VENDOR
+  CLIENT
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFIED
+  QUOTED
+  WON
+  LOST
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum JobStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  VOID
+}
+
+enum Tier {
+  BASIC
+  STANDARD
+  PREMIUM
+  ENTERPRISE
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+}
+
+enum Channel {
+  EMAIL
+  SMS
+}
+
+enum ContactType {
+  CLIENT
+  VENDOR
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  orgId     String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org Organization @relation(fields: [orgId], references: [id])
+  activities ActivityLog[] @relation("UserActivities")
+  @@index([orgId])
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  contacts  Contact[]
+  leads     Lead[]
+  bids      Bid[]
+  quotes    Quote[]
+  jobs      Job[]
+  invoices  Invoice[]
+  activities ActivityLog[]
+  properties PropertyOrSite[]
+  appointments Appointment[]
+  campaigns  Campaign[]
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  orgId     String
+  type      ContactType
+  email     String?
+  phone     String?
+  name      String
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org Organization @relation(fields: [orgId], references: [id])
+  properties PropertyOrSite[]
+  leads      Lead[]
+  vendorJobs Job[] @relation("VendorContactJobs")
+  @@index([orgId])
+}
+
+model PropertyOrSite {
+  id        String   @id @default(cuid())
+  orgId     String
+  contactId String
+  address   String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org     Organization @relation(fields: [orgId], references: [id])
+  contact Contact       @relation(fields: [contactId], references: [id])
+  @@index([orgId])
+  @@index([contactId])
+}
+
+model Lead {
+  id        String     @id @default(cuid())
+  orgId     String
+  contactId String
+  status    LeadStatus @default(NEW)
+  source    String?
+  message   String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  org     Organization @relation(fields: [orgId], references: [id])
+  contact Contact       @relation(fields: [contactId], references: [id])
+  bids    Bid[]
+  @@index([orgId])
+  @@index([contactId])
+}
+
+model Bid {
+  id        String   @id @default(cuid())
+  orgId     String
+  leadId    String?
+  sqft      Int
+  rooms     Int
+  daysTarget Int
+  tier      Tier
+  deepClean   Boolean @default(false)
+  pest        Boolean @default(false)
+  flooring    Boolean @default(false)
+  lawn        Boolean @default(false)
+  maintenance Boolean @default(false)
+  deodorize   Boolean @default(false)
+  basePrice  Decimal @db.Decimal(10,2)
+  rushMultiplier Decimal @db.Decimal(5,2)
+  riskFactor Decimal @db.Decimal(5,2)
+  overhead   Decimal @db.Decimal(10,2)
+  margin     Decimal @db.Decimal(5,2)
+  total      Decimal @db.Decimal(10,2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  org   Organization @relation(fields: [orgId], references: [id])
+  lead  Lead?        @relation(fields: [leadId], references: [id])
+  quote Quote?
+  @@index([orgId])
+  @@index([leadId])
+}
+
+model Quote {
+  id        String   @id @default(cuid())
+  orgId     String
+  bidId     String   @unique
+  status    QuoteStatus @default(DRAFT)
+  pdfUrl    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org  Organization @relation(fields: [orgId], references: [id])
+  bid  Bid           @relation(fields: [bidId], references: [id])
+  job  Job?
+  @@index([orgId])
+}
+
+model Job {
+  id        String   @id @default(cuid())
+  orgId     String
+  quoteId   String   @unique
+  status    JobStatus @default(SCHEDULED)
+  scheduledAt DateTime?
+  vendorId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org    Organization @relation(fields: [orgId], references: [id])
+  quote  Quote         @relation(fields: [quoteId], references: [id])
+  vendor Contact?      @relation(name: "VendorContactJobs", fields: [vendorId], references: [id])
+  invoice Invoice?
+  appointments Appointment[]
+  @@index([orgId])
+  @@index([vendorId])
+}
+
+model Invoice {
+  id        String   @id @default(cuid())
+  orgId     String
+  jobId     String   @unique
+  status    InvoiceStatus @default(DRAFT)
+  amount    Decimal @db.Decimal(10,2)
+  stripePaymentIntentId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org   Organization @relation(fields: [orgId], references: [id])
+  job   Job           @relation(fields: [jobId], references: [id])
+  @@index([orgId])
+}
+
+model Appointment {
+  id        String   @id @default(cuid())
+  orgId     String
+  jobId     String
+  startsAt  DateTime
+  endsAt    DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org Organization @relation(fields: [orgId], references: [id])
+  job Job           @relation(fields: [jobId], references: [id])
+  @@index([orgId])
+  @@index([jobId])
+}
+
+model Campaign {
+  id        String   @id @default(cuid())
+  orgId     String
+  name      String
+  channel   Channel
+  status    CampaignStatus @default(DRAFT)
+  content   String
+  filter    String?
+  scheduleAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org Organization @relation(fields: [orgId], references: [id])
+  @@index([orgId])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  orgId     String
+  actorId   String?
+  action    String
+  target    String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  org   Organization @relation(fields: [orgId], references: [id])
+  actor User?        @relation("UserActivities", fields: [actorId], references: [id])
+  @@index([orgId])
+  @@index([actorId])
+}
+
+
