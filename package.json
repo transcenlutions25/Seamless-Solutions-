@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r --filter @seamless/* dev",
-    "build": "pnpm -r --filter @seamless/* build",
-    "start": "pnpm -r --filter @seamless/* start",
+    "dev": "pnpm -r --filter @seamless/web dev",
+    "build": "pnpm -r --filter @seamless/web build",
+    "start": "pnpm -r --filter @seamless/web start",
     "push:github": "bash scripts/oneclick-github.sh"
   },
   "devDependencies": {

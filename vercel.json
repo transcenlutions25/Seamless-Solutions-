@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "projectSettings": {
+    "framework": "nextjs",
+    "rootDirectory": "apps/web",
+    "outputDirectory": ".next"
+  },
+  "buildCommand": "pnpm --filter @seamless/web... build",
+  "installCommand": "pnpm install --frozen-lockfile || pnpm install",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  }
+}
