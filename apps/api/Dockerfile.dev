@@ -1,0 +1,27 @@
+FROM node:20-alpine
+
+# Install pnpm
+RUN npm install -g pnpm@10.18.1
+
+WORKDIR /app
+
+# Copy workspace files
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY tsconfig.json ./
+
+# Copy all packages
+COPY packages ./packages
+COPY apps/api ./apps/api
+
+# Install dependencies
+RUN pnpm install
+
+# Generate Prisma Client
+WORKDIR /app/apps/api
+RUN pnpm exec prisma generate
+
+WORKDIR /app
+
+EXPOSE 4000
+
+CMD ["pnpm", "--filter", "@seamless/api", "dev"]
