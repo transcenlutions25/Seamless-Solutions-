@@ -6,7 +6,9 @@
     "dev": "pnpm -r --filter @seamless/* dev",
     "build": "pnpm -r --filter @seamless/* build",
     "start": "pnpm -r --filter @seamless/* start",
-    "push:github": "bash scripts/oneclick-github.sh"
+    "push:github": "bash scripts/oneclick-github.sh",
+    "build:web": "turbo run build --filter=@seamless/web",
+    "dev:web": "turbo run dev --filter=@seamless/web"
   },
   "devDependencies": {
     "turbo": "2.1.3"
