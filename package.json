@@ -6,6 +6,8 @@
     "dev": "pnpm -r --filter @seamless/* dev",
     "build": "pnpm -r --filter @seamless/* build",
     "start": "pnpm -r --filter @seamless/* start",
+    "dev:api": "pnpm --filter @seamless/api dev",
+    "dev:web": "pnpm --filter @seamless/web dev",
     "push:github": "bash scripts/oneclick-github.sh"
   },
   "devDependencies": {
