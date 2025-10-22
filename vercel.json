@@ -1,6 +1,6 @@
 {
-  "installCommand": "pnpm install",
-  "buildCommand": "turbo run build --filter=@seamless/web",
-  "outputDirectory": "apps/web/.next",
-  "framework": "nextjs"
+  "builds": [
+    { "src": "apps/web/next.config.mjs", "use": "@vercel/next" }
+  ],
+  "installCommand": "pnpm install"
 }
