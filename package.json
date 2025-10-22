@@ -3,12 +3,34 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r --filter @seamless/* dev",
-    "build": "pnpm -r --filter @seamless/* build",
-    "start": "pnpm -r --filter @seamless/* start",
-    "push:github": "bash scripts/oneclick-github.sh"
+    "dev": "turbo run dev",
+    "dev:api": "pnpm --filter @seamless/api dev",
+    "dev:web": "pnpm --filter @seamless/web dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "prisma:generate": "pnpm --filter @seamless/api prisma:generate",
+    "prisma:migrate": "pnpm --filter @seamless/api prisma:migrate",
+    "prisma:seed": "pnpm --filter @seamless/api prisma:seed",
+    "db:push": "pnpm --filter @seamless/api prisma db push",
+    "db:reset": "pnpm --filter @seamless/api prisma migrate reset",
+    "docker:up": "docker-compose -f infra/docker-compose.yml up -d postgres redis",
+    "docker:down": "docker-compose -f infra/docker-compose.yml down",
+    "docker:build": "docker-compose -f infra/docker-compose.yml --profile production build",
+    "docker:prod": "docker-compose -f infra/docker-compose.yml --profile production up",
+    "push:github": "bash scripts/oneclick-github.sh",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
-    "turbo": "2.1.3"
+    "turbo": "^2.1.3",
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3"
+  },
+  "packageManager": "pnpm@8.15.1",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
   }
 }

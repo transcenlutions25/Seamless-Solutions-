@@ -1,0 +1,532 @@
+openapi: 3.0.3
+info:
+  title: Seamless Solutions API
+  description: API for service business management platform
+  version: 1.0.0
+  contact:
+    name: Seamless Solutions
+    email: support@seamless.com
+servers:
+  - url: http://localhost:3001
+    description: Development server
+  - url: https://api.seamless.com
+    description: Production server
+security:
+  - BearerAuth: []
+paths:
+  /auth/signup:
+    post:
+      tags: [Authentication]
+      summary: Create new account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name, orgName, subdomain]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 6
+                name:
+                  type: string
+                orgName:
+                  type: string
+                subdomain:
+                  type: string
+                  pattern: ^[a-z0-9-]+$
+      responses:
+        200:
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        400:
+          $ref: '#/components/responses/BadRequest'
+  
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login to account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        200:
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+  
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user
+      responses:
+        200:
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+  
+  /leads:
+    get:
+      tags: [Leads]
+      summary: List all leads
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [NEW, CONTACTED, QUALIFIED, QUOTED, WON, LOST, ARCHIVED]
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        200:
+          description: List of leads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLeads'
+    
+  /leads/capture:
+    post:
+      tags: [Leads]
+      summary: Public lead capture form
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLead'
+      responses:
+        200:
+          description: Lead captured
+        429:
+          $ref: '#/components/responses/TooManyRequests'
+  
+  /ai/bid:
+    post:
+      tags: [AI]
+      summary: Calculate bid using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBid'
+      responses:
+        200:
+          description: Bid calculation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BidResult'
+  
+  /quotes:
+    get:
+      tags: [Quotes]
+      summary: List all quotes
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [DRAFT, SENT, VIEWED, ACCEPTED, REJECTED, EXPIRED]
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        200:
+          description: List of quotes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedQuotes'
+    
+    post:
+      tags: [Quotes]
+      summary: Create new quote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuote'
+      responses:
+        201:
+          description: Quote created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+  
+  /quotes/{id}/pdf:
+    get:
+      tags: [Quotes]
+      summary: Generate quote PDF
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        200:
+          description: PDF document
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  parameters:
+    IdParam:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+    PageParam:
+      in: query
+      name: page
+      schema:
+        type: integer
+        default: 1
+    LimitParam:
+      in: query
+      name: limit
+      schema:
+        type: integer
+        default: 50
+        maximum: 100
+  
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+    
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+            user:
+              $ref: '#/components/schemas/User'
+            org:
+              $ref: '#/components/schemas/Organization'
+    
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [OWNER, STAFF, VENDOR, CLIENT]
+        avatarUrl:
+          type: string
+        phoneNumber:
+          type: string
+    
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        subdomain:
+          type: string
+        logoUrl:
+          type: string
+        trialEndsAt:
+          type: string
+          format: date-time
+    
+    Lead:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [NEW, CONTACTED, QUALIFIED, QUOTED, WON, LOST, ARCHIVED]
+        source:
+          type: string
+        value:
+          type: number
+        score:
+          type: integer
+        contact:
+          $ref: '#/components/schemas/Contact'
+        createdAt:
+          type: string
+          format: date-time
+    
+    Contact:
+      type: object
+      properties:
+        id:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        company:
+          type: string
+        type:
+          type: string
+          enum: [LEAD, CLIENT, VENDOR, STAFF]
+    
+    CreateLead:
+      type: object
+      required: [firstName, lastName]
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        company:
+          type: string
+        source:
+          type: string
+        notes:
+          type: string
+    
+    CreateBid:
+      type: object
+      required: [squareFeet, rooms, daysTarget, tier]
+      properties:
+        leadId:
+          type: string
+        propertyId:
+          type: string
+        squareFeet:
+          type: integer
+        rooms:
+          type: integer
+        bathrooms:
+          type: integer
+        daysTarget:
+          type: integer
+        tier:
+          type: string
+          enum: [BASIC, STANDARD, PREMIUM, LUXURY]
+        deepClean:
+          type: boolean
+        pestControl:
+          type: boolean
+        flooringRepair:
+          type: boolean
+        lawnCare:
+          type: boolean
+        maintenance:
+          type: boolean
+        deodorize:
+          type: boolean
+    
+    BidResult:
+      type: object
+      properties:
+        id:
+          type: string
+        basePrice:
+          type: number
+        rushMultiplier:
+          type: number
+        riskFactor:
+          type: number
+        overhead:
+          type: number
+        margin:
+          type: number
+        totalPrice:
+          type: number
+        suggestions:
+          type: array
+          items:
+            type: string
+    
+    Quote:
+      type: object
+      properties:
+        id:
+          type: string
+        quoteNumber:
+          type: string
+        status:
+          type: string
+        validUntil:
+          type: string
+          format: date-time
+        subtotal:
+          type: number
+        tax:
+          type: number
+        discount:
+          type: number
+        total:
+          type: number
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineItem'
+    
+    CreateQuote:
+      type: object
+      required: [contactId, lineItems]
+      properties:
+        contactId:
+          type: string
+        propertyId:
+          type: string
+        bidId:
+          type: string
+        validDays:
+          type: integer
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineItem'
+        discount:
+          type: number
+        tax:
+          type: number
+        terms:
+          type: string
+        notes:
+          type: string
+    
+    LineItem:
+      type: object
+      properties:
+        description:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        total:
+          type: number
+    
+    PaginatedLeads:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Lead'
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+    
+    PaginatedQuotes:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Quote'
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Leads
+    description: Lead management and CRM
+  - name: AI
+    description: AI-powered features
+  - name: Quotes
+    description: Quote management
+  - name: Jobs
+    description: Job scheduling and management
+  - name: Invoices
+    description: Invoicing and payments
+  - name: Campaigns
+    description: Marketing automation
