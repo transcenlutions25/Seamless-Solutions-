@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate Prisma schema
+        run: cd apps/api && pnpm prisma:generate && npx prisma validate
+
+      - name: Typecheck API
+        run: cd apps/api && pnpm typecheck
+
+      - name: Typecheck Web
+        run: cd apps/web && pnpm typecheck
+
+      - name: Lint
+        run: |
+          cd apps/api && pnpm lint || true
+          cd ../web && pnpm lint || true
+
+      - name: Build API
+        run: cd apps/api && pnpm build
+
+      - name: Build Web
+        run: cd apps/web && pnpm build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000/api

@@ -1,0 +1,551 @@
+// Seamless Solutions - Production Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Role {
+  OWNER
+  STAFF
+  VENDOR
+  CLIENT
+}
+
+enum ContactType {
+  LEAD
+  CLIENT
+  VENDOR
+  PARTNER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  QUOTED
+  WON
+  LOST
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum JobStatus {
+  SCHEDULED
+  IN_PROGRESS
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum Tier {
+  BASIC
+  STANDARD
+  PREMIUM
+  LUXURY
+}
+
+enum Channel {
+  EMAIL
+  SMS
+  BOTH
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum AppointmentType {
+  CONSULTATION
+  ESTIMATE
+  JOB
+  FOLLOWUP
+  INSPECTION
+}
+
+// ============================================
+// CORE MODELS
+// ============================================
+
+model Organization {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  email           String?
+  phone           String?
+  address         String?
+  timezone        String   @default("America/New_York")
+  settings        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  users           User[]
+  contacts        Contact[]
+  vendors         Vendor[]
+  properties      PropertyOrSite[]
+  leads           Lead[]
+  bids            Bid[]
+  quotes          Quote[]
+  jobs            Job[]
+  invoices        Invoice[]
+  appointments    Appointment[]
+  campaigns       Campaign[]
+  activityLogs    ActivityLog[]
+
+  @@index([slug])
+}
+
+model User {
+  id              String   @id @default(cuid())
+  orgId           String
+  email           String   @unique
+  passwordHash    String?
+  name            String
+  role            Role     @default(STAFF)
+  phone           String?
+  avatar          String?
+  active          Boolean  @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  
+  assignedLeads   Lead[]       @relation("AssignedUser")
+  assignedJobs    Job[]        @relation("AssignedUser")
+  activityLogs    ActivityLog[]
+  vendorProfile   Vendor?
+
+  @@index([orgId])
+  @@index([email])
+}
+
+model Contact {
+  id              String      @id @default(cuid())
+  orgId           String
+  type            ContactType @default(LEAD)
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String?
+  company         String?
+  address         String?
+  city            String?
+  state           String?
+  zip             String?
+  notes           Json?
+  tags            String[]
+  customFields    Json?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  
+  leads           Lead[]
+  quotes          Quote[]
+  jobs            Job[]
+  invoices        Invoice[]
+
+  @@index([orgId])
+  @@index([email])
+  @@index([type])
+}
+
+model Vendor {
+  id              String   @id @default(cuid())
+  orgId           String
+  userId          String?  @unique
+  name            String
+  email           String
+  phone           String?
+  specialties     String[]
+  hourlyRate      Decimal? @db.Decimal(10, 2)
+  reliabilityScore Decimal @default(100) @db.Decimal(5, 2)
+  totalJobsCompleted Int   @default(0)
+  onTimePercent   Decimal  @default(100) @db.Decimal(5, 2)
+  firstPassQCPercent Decimal @default(100) @db.Decimal(5, 2)
+  active          Boolean  @default(true)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user            User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  jobs            Job[]
+  timeEntries     TimeEntry[]
+
+  @@index([orgId])
+  @@index([active])
+}
+
+model PropertyOrSite {
+  id              String   @id @default(cuid())
+  orgId           String
+  name            String?
+  address         String
+  city            String?
+  state           String?
+  zip             String?
+  sqft            Int?
+  rooms           Int?
+  floors          Int?
+  propertyType    String?
+  accessNotes     String?
+  photos          String[]
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  
+  leads           Lead[]
+  bids            Bid[]
+  jobs            Job[]
+
+  @@index([orgId])
+}
+
+// ============================================
+// LEAD & SALES PIPELINE
+// ============================================
+
+model Lead {
+  id              String      @id @default(cuid())
+  orgId           String
+  contactId       String?
+  propertyId      String?
+  assignedToId    String?
+  status          LeadStatus  @default(NEW)
+  source          String?
+  priority        Int         @default(3)
+  estimatedValue  Decimal?    @db.Decimal(10, 2)
+  description     String?
+  timeline        Json?
+  customFields    Json?
+  convertedToClientAt DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contact         Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  property        PropertyOrSite? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  assignedTo      User?        @relation("AssignedUser", fields: [assignedToId], references: [id], onDelete: SetNull)
+  
+  bids            Bid[]
+  quotes          Quote[]
+
+  @@index([orgId])
+  @@index([status])
+  @@index([assignedToId])
+}
+
+// ============================================
+// AI BID CALCULATOR
+// ============================================
+
+model Bid {
+  id              String   @id @default(cuid())
+  orgId           String
+  leadId          String?
+  propertyId      String?
+  
+  // Inputs
+  sqft            Int
+  rooms           Int
+  daysTarget      Int      @default(7)
+  tier            Tier     @default(STANDARD)
+  
+  // Scope toggles
+  deepClean       Boolean  @default(false)
+  pestControl     Boolean  @default(false)
+  flooringRepair  Boolean  @default(false)
+  lawnCare        Boolean  @default(false)
+  maintenance     Boolean  @default(false)
+  deodorize       Boolean  @default(false)
+  paintTouch      Boolean  @default(false)
+  
+  // Calculated pricing
+  basePrice       Decimal  @db.Decimal(10, 2)
+  rushMultiplier  Decimal  @default(1.0) @db.Decimal(5, 2)
+  riskFactor      Decimal  @default(1.0) @db.Decimal(5, 2)
+  overhead        Decimal  @db.Decimal(10, 2)
+  margin          Decimal  @db.Decimal(10, 2)
+  totalPrice      Decimal  @db.Decimal(10, 2)
+  
+  // Metadata
+  localPriceMultiplier Decimal @default(1.0) @db.Decimal(5, 2)
+  aiSuggestions   Json?
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lead            Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  property        PropertyOrSite? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  
+  quote           Quote?
+
+  @@index([orgId])
+  @@index([leadId])
+}
+
+// ============================================
+// QUOTES & JOBS
+// ============================================
+
+model Quote {
+  id              String      @id @default(cuid())
+  orgId           String
+  leadId          String?
+  contactId       String?
+  bidId           String?     @unique
+  quoteNumber     String      @unique
+  status          QuoteStatus @default(DRAFT)
+  
+  title           String
+  description     String?
+  lineItems       Json
+  subtotal        Decimal     @db.Decimal(10, 2)
+  tax             Decimal     @default(0) @db.Decimal(10, 2)
+  total           Decimal     @db.Decimal(10, 2)
+  
+  validUntil      DateTime?
+  sentAt          DateTime?
+  viewedAt        DateTime?
+  acceptedAt      DateTime?
+  rejectedAt      DateTime?
+  
+  pdfUrl          String?
+  notes           String?
+  terms           String?
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lead            Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  contact         Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  bid             Bid?         @relation(fields: [bidId], references: [id], onDelete: SetNull)
+  
+  job             Job?
+
+  @@index([orgId])
+  @@index([status])
+  @@index([quoteNumber])
+}
+
+model Job {
+  id              String    @id @default(cuid())
+  orgId           String
+  quoteId         String?   @unique
+  contactId       String?
+  propertyId      String?
+  vendorId        String?
+  assignedToId    String?
+  jobNumber       String    @unique
+  status          JobStatus @default(SCHEDULED)
+  
+  title           String
+  description     String?
+  scheduledStart  DateTime?
+  scheduledEnd    DateTime?
+  actualStart     DateTime?
+  actualEnd       DateTime?
+  
+  tasks           Json?
+  checklist       Json?
+  qcPhotos        String[]
+  notes           String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  quote           Quote?       @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  contact         Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  property        PropertyOrSite? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  vendor          Vendor?      @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  assignedTo      User?        @relation("AssignedUser", fields: [assignedToId], references: [id], onDelete: SetNull)
+  
+  timeEntries     TimeEntry[]
+  invoices        Invoice[]
+
+  @@index([orgId])
+  @@index([status])
+  @@index([jobNumber])
+  @@index([vendorId])
+}
+
+model TimeEntry {
+  id              String    @id @default(cuid())
+  jobId           String
+  vendorId        String
+  clockIn         DateTime
+  clockOut        DateTime?
+  hoursWorked     Decimal?  @db.Decimal(6, 2)
+  notes           String?
+  location        Json?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  job             Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  vendor          Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([vendorId])
+}
+
+// ============================================
+// INVOICES & PAYMENTS
+// ============================================
+
+model Invoice {
+  id              String        @id @default(cuid())
+  orgId           String
+  jobId           String?
+  contactId       String?
+  invoiceNumber   String        @unique
+  status          InvoiceStatus @default(DRAFT)
+  
+  lineItems       Json
+  subtotal        Decimal       @db.Decimal(10, 2)
+  tax             Decimal       @default(0) @db.Decimal(10, 2)
+  total           Decimal       @db.Decimal(10, 2)
+  amountPaid      Decimal       @default(0) @db.Decimal(10, 2)
+  
+  dueDate         DateTime?
+  sentAt          DateTime?
+  paidAt          DateTime?
+  
+  stripePaymentIntentId String?
+  pdfUrl          String?
+  notes           String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  organization    Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  job             Job?          @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  contact         Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([status])
+  @@index([invoiceNumber])
+}
+
+// ============================================
+// CALENDAR & SCHEDULING
+// ============================================
+
+model Appointment {
+  id              String          @id @default(cuid())
+  orgId           String
+  type            AppointmentType @default(CONSULTATION)
+  title           String
+  description     String?
+  startTime       DateTime
+  endTime         DateTime
+  location        String?
+  attendees       Json?
+  reminderSent    Boolean         @default(false)
+  cancelled       Boolean         @default(false)
+  notes           String?
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  organization    Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([startTime])
+}
+
+// ============================================
+// MARKETING & CAMPAIGNS
+// ============================================
+
+model Campaign {
+  id              String         @id @default(cuid())
+  orgId           String
+  name            String
+  channel         Channel        @default(EMAIL)
+  status          CampaignStatus @default(DRAFT)
+  
+  subject         String?
+  message         String
+  filters         Json?
+  scheduledFor    DateTime?
+  sentAt          DateTime?
+  
+  recipientCount  Int            @default(0)
+  openedCount     Int            @default(0)
+  clickedCount    Int            @default(0)
+  
+  analytics       Json?
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  organization    Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([status])
+}
+
+// ============================================
+// AUDIT & ACTIVITY
+// ============================================
+
+model ActivityLog {
+  id              String   @id @default(cuid())
+  orgId           String
+  userId          String?
+  entityType      String
+  entityId        String
+  action          String
+  changes         Json?
+  ipAddress       String?
+  userAgent       String?
+  traceId         String?
+  
+  createdAt       DateTime @default(now())
+
+  organization    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user            User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([traceId])
+}
