@@ -1,0 +1,7 @@
+apps/api
+infra
+scripts
+*.md
+.git
+node_modules
+.pnpm-store
