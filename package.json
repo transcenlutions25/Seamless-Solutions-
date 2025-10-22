@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "pnpm -r --filter @seamless/* dev",
-    "build": "pnpm -r --filter @seamless/* build",
-    "start": "pnpm -r --filter @seamless/* start",
+    "build": "pnpm -C apps/web build",
+    "start": "pnpm -C apps/web start",
+    "vercel-build": "pnpm -C apps/web build",
     "push:github": "bash scripts/oneclick-github.sh"
   },
   "devDependencies": {
