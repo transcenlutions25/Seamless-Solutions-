@@ -9,6 +9,8 @@
     "push:github": "bash scripts/oneclick-github.sh"
   },
   "devDependencies": {
-    "turbo": "2.1.3"
+    "turbo": "2.1.3",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
   }
 }
