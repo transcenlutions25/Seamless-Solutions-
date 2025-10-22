@@ -6,7 +6,12 @@
     "dev": "pnpm -r --filter @seamless/* dev",
     "build": "pnpm -r --filter @seamless/* build",
     "start": "pnpm -r --filter @seamless/* start",
-    "push:github": "bash scripts/oneclick-github.sh"
+    "push:github": "bash scripts/oneclick-github.sh",
+    "docker:up": "cd infra && docker-compose up -d",
+    "docker:down": "cd infra && docker-compose down",
+    "docker:build": "cd infra && docker-compose build",
+    "docker:logs": "cd infra && docker-compose logs -f",
+    "deploy": "cd infra && docker-compose up -d --build"
   },
   "devDependencies": {
     "turbo": "2.1.3"
