@@ -1,8 +1,9 @@
-export default function Page() {
-  return (
-    <main style={{ padding: 40, fontFamily: 'sans-serif', color: '#00A8A8' }}>
-      <h1>Seamless Solutions</h1>
-      <p>Ready for Cursor build.</p>
-    </main>
-  );
+import { redirect } from 'next/navigation'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+export default async function HomePage() {
+  // For now, redirect to dashboard
+  // In a real app, you might want to show a landing page for unauthenticated users
+  redirect('/dashboard')
 }

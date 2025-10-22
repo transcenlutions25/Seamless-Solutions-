@@ -1,0 +1,474 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  STAFF
+  VENDOR
+  CLIENT
+}
+
+enum ContactType {
+  LEAD
+  CLIENT
+  VENDOR
+  INTERNAL
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFIED
+  QUOTED
+  WON
+  LOST
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum JobStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  ON_HOLD
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum Tier {
+  BASIC
+  STANDARD
+  PREMIUM
+  LUXURY
+}
+
+enum Channel {
+  EMAIL
+  SMS
+  PHONE
+  WEBSITE
+  REFERRAL
+  SOCIAL
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  phone     String?
+  avatar    String?
+  role      Role     @default(CLIENT)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  activities     ActivityLog[]
+  createdLeads   Lead[]        @relation("LeadCreator")
+  assignedLeads  Lead[]        @relation("LeadAssignee")
+  createdQuotes  Quote[]       @relation("QuoteCreator")
+  createdJobs    Job[]         @relation("JobCreator")
+  assignedJobs   Job[]         @relation("JobAssignee")
+  createdInvoices Invoice[]    @relation("InvoiceCreator")
+  appointments   Appointment[]
+  campaigns      Campaign[]
+
+  @@map("users")
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  website     String?
+  phone       String?
+  email       String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  country     String?
+  logo        String?
+  settings    Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users       User[]
+  contacts    Contact[]
+  properties  PropertyOrSite[]
+  leads       Lead[]
+  quotes      Quote[]
+  jobs        Job[]
+  invoices    Invoice[]
+  appointments Appointment[]
+  campaigns   Campaign[]
+  activities  ActivityLog[]
+
+  @@map("organizations")
+}
+
+model Contact {
+  id             String      @id @default(cuid())
+  firstName      String
+  lastName       String?
+  email          String?
+  phone          String?
+  company        String?
+  address        String?
+  city           String?
+  state          String?
+  zipCode        String?
+  country        String?
+  type           ContactType @default(LEAD)
+  notes          String?
+  tags           String[]
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Relations
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  leads          Lead[]
+  properties     PropertyOrSite[]
+  jobs           Job[]
+  invoices       Invoice[]
+  appointments   Appointment[]
+  activities     ActivityLog[]
+
+  @@map("contacts")
+}
+
+model Vendor {
+  id              String   @id @default(cuid())
+  name            String
+  email           String   @unique
+  phone           String?
+  company         String?
+  address         String?
+  city            String?
+  state           String?
+  zipCode         String?
+  country         String?
+  specialties     String[]
+  hourlyRate      Float?
+  reliabilityScore Float?  @default(0)
+  onTimePercent   Float?   @default(0)
+  firstPassPercent Float?  @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  jobs            Job[]
+  activities      ActivityLog[]
+
+  @@map("vendors")
+}
+
+model PropertyOrSite {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  city        String
+  state       String
+  zipCode     String
+  country     String
+  propertyType String? // residential, commercial, etc.
+  squareFootage Float?
+  bedrooms    Int?
+  bathrooms   Int?
+  notes       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  contactId      String?
+  contact        Contact?     @relation(fields: [contactId], references: [id])
+  leads          Lead[]
+  jobs           Job[]
+  activities     ActivityLog[]
+
+  @@map("properties")
+}
+
+model Lead {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      LeadStatus @default(NEW)
+  source      String?
+  value       Float?
+  priority    String?    @default("medium")
+  notes       String?
+  tags        String[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  contactId      String?
+  contact        Contact?     @relation(fields: [contactId], references: [id])
+  propertyId     String?
+  property       PropertyOrSite? @relation(fields: [propertyId], references: [id])
+  createdById    String?
+  createdBy      User?        @relation("LeadCreator", fields: [createdById], references: [id])
+  assignedToId   String?
+  assignedTo     User?        @relation("LeadAssignee", fields: [assignedToId], references: [id])
+  bids           Bid[]
+  quotes         Quote[]
+  activities     ActivityLog[]
+
+  @@map("leads")
+}
+
+model Bid {
+  id              String   @id @default(cuid())
+  squareFootage   Float
+  rooms           Int
+  daysTarget      Int
+  tier            Tier
+  scope           Json     // toggles for different services
+  basePrice       Float
+  rushMultiplier  Float    @default(1.0)
+  riskFactor      Float    @default(1.0)
+  overhead        Float    @default(0.1)
+  margin          Float    @default(0.2)
+  totalPrice      Float
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  leadId          String
+  lead            Lead     @relation(fields: [leadId], references: [id])
+  quotes          Quote[]
+
+  @@map("bids")
+}
+
+model Quote {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  status      QuoteStatus @default(DRAFT)
+  subtotal    Float
+  tax         Float       @default(0)
+  discount    Float       @default(0)
+  total       Float
+  validUntil  DateTime?
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  leadId         String?
+  lead           Lead?        @relation(fields: [leadId], references: [id])
+  bidId          String?
+  bid            Bid?         @relation(fields: [bidId], references: [id])
+  createdById    String?
+  createdBy      User?        @relation("QuoteCreator", fields: [createdById], references: [id])
+  jobs           Job[]
+  invoices       Invoice[]
+  activities     ActivityLog[]
+
+  @@map("quotes")
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  status      JobStatus @default(SCHEDULED)
+  startDate   DateTime?
+  endDate     DateTime?
+  estimatedHours Float?
+  actualHours    Float?
+  notes       String?
+  qcPhotos    String[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  contactId      String?
+  contact        Contact?     @relation(fields: [contactId], references: [id])
+  propertyId     String?
+  property       PropertyOrSite? @relation(fields: [propertyId], references: [id])
+  quoteId        String?
+  quote          Quote?       @relation(fields: [quoteId], references: [id])
+  createdById    String?
+  createdBy      User?        @relation("JobCreator", fields: [createdById], references: [id])
+  assignedToId   String?
+  assignedTo     User?        @relation("JobAssignee", fields: [assignedToId], references: [id])
+  vendorId       String?
+  vendor         Vendor?      @relation(fields: [vendorId], references: [id])
+  invoices       Invoice[]
+  appointments   Appointment[]
+  activities     ActivityLog[]
+
+  @@map("jobs")
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  invoiceNumber String      @unique
+  status      InvoiceStatus @default(DRAFT)
+  subtotal    Float
+  tax         Float         @default(0)
+  discount    Float         @default(0)
+  total       Float
+  dueDate     DateTime?
+  paidDate    DateTime?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  contactId      String?
+  contact        Contact?     @relation(fields: [contactId], references: [id])
+  quoteId        String?
+  quote          Quote?       @relation(fields: [quoteId], references: [id])
+  jobId          String?
+  job            Job?         @relation(fields: [jobId], references: [id])
+  createdById    String?
+  createdBy      User?        @relation("InvoiceCreator", fields: [createdById], references: [id])
+  activities     ActivityLog[]
+
+  @@map("invoices")
+}
+
+model Appointment {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  location    String?
+  notes       String?
+  isRecurring Boolean  @default(false)
+  recurrencePattern String? // daily, weekly, monthly
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  contactId      String?
+  contact        Contact?     @relation(fields: [contactId], references: [id])
+  propertyId     String?
+  property       PropertyOrSite? @relation(fields: [propertyId], references: [id])
+  jobId          String?
+  job            Job?         @relation(fields: [jobId], references: [id])
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id])
+  activities     ActivityLog[]
+
+  @@map("appointments")
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  type        Channel
+  status      CampaignStatus @default(DRAFT)
+  subject     String?
+  content     String?
+  targetAudience Json?       // filters and criteria
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  metrics     Json?          // open rates, click rates, etc.
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relations
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdById    String?
+  createdBy      User?        @relation(fields: [createdById], references: [id])
+  activities     ActivityLog[]
+
+  @@map("campaigns")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  action      String
+  entityType  String
+  entityId    String
+  details     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id])
+  contactId      String?
+  contact        Contact?     @relation(fields: [contactId], references: [id])
+  propertyId     String?
+  property       PropertyOrSite? @relation(fields: [propertyId], references: [id])
+  leadId         String?
+  lead           Lead?        @relation(fields: [leadId], references: [id])
+  quoteId        String?
+  quote          Quote?       @relation(fields: [quoteId], references: [id])
+  jobId          String?
+  job            Job?         @relation(fields: [jobId], references: [id])
+  invoiceId      String?
+  invoice        Invoice?     @relation(fields: [invoiceId], references: [id])
+  appointmentId  String?
+  appointment    Appointment? @relation(fields: [appointmentId], references: [id])
+  campaignId     String?
+  campaign       Campaign?    @relation(fields: [campaignId], references: [id])
+  vendorId       String?
+  vendor         Vendor?      @relation(fields: [vendorId], references: [id])
+
+  @@map("activity_logs")
+}
