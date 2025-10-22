@@ -1,0 +1,4 @@
+{
+  "buildCommand": "pnpm -w --filter @seamless/web build",
+  "outputDirectory": "apps/web/.next"
+}
