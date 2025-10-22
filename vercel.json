@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd apps/web && pnpm install && pnpm run build",
+  "outputDirectory": "apps/web/.next",
+  "installCommand": "pnpm install",
+  "framework": null,
+  "devCommand": "pnpm run dev --filter @seamless/web"
+}
