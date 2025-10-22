@@ -6,7 +6,18 @@
     "dev": "pnpm -r --filter @seamless/* dev",
     "build": "pnpm -r --filter @seamless/* build",
     "start": "pnpm -r --filter @seamless/* start",
-    "push:github": "bash scripts/oneclick-github.sh"
+    "push:github": "bash scripts/oneclick-github.sh",
+    "deploy": "bash scripts/deploy.sh",
+    "deploy:prod": "bash scripts/deploy.sh production",
+    "health": "bash scripts/health-check.sh",
+    "backup": "bash scripts/backup.sh",
+    "monitor": "bash scripts/monitor.sh",
+    "logs": "docker-compose -f docker-compose.prod.yml logs -f",
+    "logs:api": "docker-compose -f docker-compose.prod.yml logs -f api",
+    "logs:web": "docker-compose -f docker-compose.prod.yml logs -f web",
+    "logs:nginx": "docker-compose -f docker-compose.prod.yml logs -f nginx",
+    "stop": "docker-compose -f docker-compose.prod.yml down",
+    "restart": "docker-compose -f docker-compose.prod.yml restart"
   },
   "devDependencies": {
     "turbo": "2.1.3"
