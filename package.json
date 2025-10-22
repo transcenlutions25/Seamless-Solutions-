@@ -3,12 +3,20 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r --filter @seamless/* dev",
+    "dev": "pnpm -r --parallel --filter @seamless/* dev",
     "build": "pnpm -r --filter @seamless/* build",
-    "start": "pnpm -r --filter @seamless/* start",
+    "start": "pnpm -r --parallel --filter @seamless/* start",
+    "db:up": "docker compose -f infra/docker-compose.yml up -d",
+    "db:down": "docker compose -f infra/docker-compose.yml down -v",
+    "prisma:generate": "pnpm --filter @seamless/api prisma:generate",
+    "prisma:validate": "pnpm --filter @seamless/api prisma:validate",
+    "seed": "tsx scripts/seed.ts",
     "push:github": "bash scripts/oneclick-github.sh"
   },
   "devDependencies": {
-    "turbo": "2.1.3"
+    "turbo": "2.1.3",
+    "tsx": "4.19.2",
+    "typescript": "5.6.3",
+    "@types/node": "20.16.11"
   }
 }

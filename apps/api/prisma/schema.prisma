@@ -1,0 +1,310 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  STAFF
+  VENDOR
+  CLIENT
+}
+
+enum ContactType {
+  PERSON
+  COMPANY
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFIED
+  QUOTED
+  WON
+  LOST
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum JobStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  VOID
+}
+
+enum Tier {
+  BASIC
+  STANDARD
+  PREMIUM
+}
+
+enum Channel {
+  EMAIL
+  SMS
+  PHONE
+  WEB
+  REFERRAL
+  OTHER
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+}
+
+model Org {
+  id            String         @id @default(cuid())
+  name          String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  users         User[]
+  contacts      Contact[]
+  vendors       Vendor[]
+  properties    PropertyOrSite[]
+  leads         Lead[]
+  bids          Bid[]
+  quotes        Quote[]
+  jobs          Job[]
+  invoices      Invoice[]
+  appointments  Appointment[]
+  campaigns     Campaign[]
+  activityLogs  ActivityLog[]
+  files         FileAsset[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  email     String   @unique
+  name      String?
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  activity  ActivityLog[] @relation("UserActivity")
+  files     FileAsset[]
+}
+
+model Contact {
+  id          String      @id @default(cuid())
+  orgId       String
+  org         Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  type        ContactType
+  firstName   String?
+  lastName    String?
+  companyName String?
+  email       String?
+  phone       String?
+  address1    String?
+  address2    String?
+  city        String?
+  state       String?
+  postalCode  String?
+  country     String?
+  properties  PropertyOrSite[]
+  leads       Lead[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Vendor {
+  id                 String   @id @default(cuid())
+  orgId              String
+  org                Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name               String
+  email              String?
+  phone              String?
+  reliabilityScore   Float    @default(0)
+  onTimePercent      Float    @default(0)
+  firstPassQcPercent Float    @default(0)
+  files              FileAsset[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model PropertyOrSite {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contactId   String?
+  contact     Contact?  @relation(fields: [contactId], references: [id])
+  name        String?
+  address1    String?
+  address2    String?
+  city        String?
+  state       String?
+  postalCode  String?
+  country     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Lead {
+  id          String      @id @default(cuid())
+  orgId       String
+  org         Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  contactId   String?
+  contact     Contact?    @relation(fields: [contactId], references: [id])
+  status      LeadStatus  @default(NEW)
+  source      Channel?
+  notes       String?
+  bids        Bid[]
+  quotes      Quote[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Bid {
+  id             String   @id @default(cuid())
+  orgId          String
+  org            Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  leadId         String
+  lead           Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  sqft           Int
+  rooms          Int
+  daysTarget     Int
+  tier           Tier
+  deepClean      Boolean  @default(false)
+  pest           Boolean  @default(false)
+  flooring       Boolean  @default(false)
+  lawn           Boolean  @default(false)
+  maintenance    Boolean  @default(false)
+  deodorize      Boolean  @default(false)
+  base           Float
+  rushMultiplier Float
+  risk           Float
+  overhead       Float
+  margin         Float
+  total          Float
+  quote          Quote?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Quote {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  leadId    String
+  lead      Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  bidId     String       @unique
+  bid       Bid          @relation(fields: [bidId], references: [id])
+  status    QuoteStatus  @default(DRAFT)
+  total     Float
+  pdfUrl    String?
+  jobs      Job[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model Job {
+  id             String     @id @default(cuid())
+  orgId          String
+  org            Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  quoteId        String
+  quote          Quote      @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  status         JobStatus  @default(SCHEDULED)
+  scheduledStart DateTime?
+  scheduledEnd   DateTime?
+  actualStart    DateTime?
+  actualEnd      DateTime?
+  invoices       Invoice[]
+  appointments   Appointment[]
+  files          FileAsset[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model Invoice {
+  id                    String        @id @default(cuid())
+  orgId                 String
+  org                   Org           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  jobId                 String
+  job                   Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  amount                Int
+  currency              String        @default("usd")
+  status                InvoiceStatus @default(DRAFT)
+  stripePaymentIntentId String?
+  stripeInvoiceId       String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+model Appointment {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  title     String?
+  notes     String?
+  startsAt  DateTime
+  endsAt    DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Campaign {
+  id         String         @id @default(cuid())
+  orgId      String
+  org        Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name       String
+  channel    Channel
+  status     CampaignStatus @default(DRAFT)
+  scheduleAt DateTime?
+  content    Json?
+  metrics    Json?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  actorUserId String?
+  actorUser   User?    @relation("UserActivity", fields: [actorUserId], references: [id])
+  action      String
+  targetType  String
+  targetId    String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+}
+
+model FileAsset {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  jobId       String?
+  job         Job?     @relation(fields: [jobId], references: [id])
+  vendorId    String?
+  vendor      Vendor?  @relation(fields: [vendorId], references: [id])
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  storageKey  String
+  url         String?
+  contentType String?
+  size        Int?
+  createdAt   DateTime @default(now())
+}
