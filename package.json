@@ -5,8 +5,13 @@
   "scripts": {
     "dev": "pnpm -r --filter @seamless/* dev",
     "build": "pnpm -r --filter @seamless/* build",
-    "start": "pnpm -r --filter @seamless/* start",
-    "push:github": "bash scripts/oneclick-github.sh"
+    "start": "./scripts/manage.sh start",
+    "stop": "./scripts/manage.sh stop",
+    "restart": "./scripts/manage.sh restart",
+    "status": "./scripts/manage.sh status",
+    "logs": "./scripts/manage.sh logs",
+    "push:github": "bash scripts/oneclick-github.sh",
+    "deploy": "./scripts/manage.sh start"
   },
   "devDependencies": {
     "turbo": "2.1.3"
