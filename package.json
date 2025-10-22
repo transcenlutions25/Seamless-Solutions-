@@ -6,9 +6,20 @@
     "dev": "pnpm -r --filter @seamless/* dev",
     "build": "pnpm -r --filter @seamless/* build",
     "start": "pnpm -r --filter @seamless/* start",
+    "type-check": "pnpm -r --filter @seamless/* type-check",
+    "lint": "pnpm -r --filter @seamless/* lint",
+    "clean": "pnpm -r --filter @seamless/* exec rm -rf dist .next node_modules/.cache",
     "push:github": "bash scripts/oneclick-github.sh"
   },
   "devDependencies": {
-    "turbo": "2.1.3"
+    "turbo": "2.1.3",
+    "typescript": "^5.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
   }
 }
