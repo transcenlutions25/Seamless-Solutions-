@@ -2,9 +2,14 @@ import fp from 'fastify-plugin';
 import fastifyJwt from '@fastify/jwt';
 import { z } from 'zod';
 
-declare module 'fastify' {
-  interface FastifyRequest {
-    user?: {
+declare module '@fastify/jwt' {
+  interface FastifyJWT {
+    payload: {
+      sub: string;
+      orgId: string;
+      role: 'OWNER' | 'STAFF' | 'VENDOR' | 'CLIENT';
+    };
+    user: {
       sub: string;
       orgId: string;
       role: 'OWNER' | 'STAFF' | 'VENDOR' | 'CLIENT';
@@ -27,11 +32,11 @@ export default fp(async (app) => {
   app.decorate('authGuard', async (request: any, reply: any) => {
     try {
       const decoded = await request.jwtVerify();
-      const parsed = AuthPayload.safeParse(decoded);
+      const parsed = AuthPayload.safeParse(decoded as any);
       if (!parsed.success) {
         return reply.code(401).send({ error: 'Invalid token' });
       }
-      request.user = parsed.data;
+      (request as any).user = parsed.data;
     } catch {
       return reply.code(401).send({ error: 'Unauthorized' });
     }
