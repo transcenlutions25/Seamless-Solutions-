@@ -1,14 +1,115 @@
 version: '3.9'
+
 services:
+  # PostgreSQL Database
   db:
     image: postgres:15-alpine
+    container_name: seamless-db
     environment:
-      POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: seamless_solutions
     ports:
       - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - seamless-network
+
+  # Redis Cache
   redis:
     image: redis:7-alpine
+    container_name: seamless-redis
     ports:
       - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - seamless-network
+
+  # API Service
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile.dev
+    container_name: seamless-api
+    ports:
+      - '4000:4000'
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/seamless_solutions
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-secret-change-in-production
+      CORS_ORIGINS: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../packages:/app/packages
+      - ../apps/api:/app/apps/api
+      - /app/node_modules
+      - /app/apps/api/node_modules
+    networks:
+      - seamless-network
+    command: sh -c "cd /app/apps/api && pnpm exec prisma migrate deploy && pnpm exec prisma generate && cd /app && pnpm --filter @seamless/api dev"
+
+  # Web Service
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile.dev
+    container_name: seamless-web
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      API_URL: http://api:4000
+    depends_on:
+      - api
+    volumes:
+      - ../packages:/app/packages
+      - ../apps/web:/app/apps/web
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/apps/web/.next
+    networks:
+      - seamless-network
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    container_name: seamless-nginx
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+      - web
+    networks:
+      - seamless-network
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  seamless-network:
+    driver: bridge

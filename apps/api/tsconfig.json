@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "declaration": true,
+    "baseUrl": ".",
+    "paths": {
+      "@seamless/types": ["../../packages/types/dist"],
+      "@seamless/config": ["../../packages/config/dist"],
+      "@seamless/utils": ["../../packages/utils/dist"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+}
