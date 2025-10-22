@@ -2,15 +2,16 @@
   "name": "seamless-solutions",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@9.0.0",
   "scripts": {
-    "dev": "pnpm -r --filter @seamless/* dev",
-    "build": "pnpm -r --filter @seamless/* build",
-    "start": "pnpm -r --filter @seamless/* start",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
     "push:github": "bash scripts/oneclick-github.sh",
     "build:web": "turbo run build --filter=@seamless/web",
     "dev:web": "turbo run dev --filter=@seamless/web"
   },
   "devDependencies": {
-    "turbo": "2.1.3"
+    "turbo": "^2.1.3"
   }
 }
