@@ -12,3 +12,25 @@ services:
     image: redis:7-alpine
     ports:
       - '6379:6379'
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+    ports:
+      - '4000:4000'
+    depends_on:
+      - db
+      - redis
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: '1'
+    ports:
+      - '3000:3000'
+    depends_on:
+      - api
