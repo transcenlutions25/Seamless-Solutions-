@@ -2,5 +2,12 @@
   "name": "@seamless/api",
   "version": "1.0.0",
   "scripts": { "dev": "tsx src/index.ts" },
-  "dependencies": { "fastify": "4.28.1" }
+  "dependencies": { 
+    "fastify": "4.28.1" 
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
 }
