@@ -1,0 +1,12 @@
+node_modules
+.turbo
+.next
+dist
+build
+.git
+.env*.local
+apps/api
+infra
+scripts
+*.md
+!apps/web/**
